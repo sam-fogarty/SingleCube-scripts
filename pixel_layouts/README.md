@@ -1,0 +1,1 @@
+Pixel layout yamls are needed for accessing pixel yz positions. They are also inputs for larnd-sim and module0_flow. The yamls are generated using larpix-geometry.
