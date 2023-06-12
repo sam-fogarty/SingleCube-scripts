@@ -1,3 +1,5 @@
+// Author: Mike Mooney <mrmooney@colostate.edu>
+
 #include <string>
 #include <iostream>
 #include <cassert>
