@@ -1,3 +1,5 @@
+// Author: Mike Mooney <mrmooney@colostate.edu>
+
 //some standard C++ includes
 #include <iostream>
 #include <stdlib.h>
