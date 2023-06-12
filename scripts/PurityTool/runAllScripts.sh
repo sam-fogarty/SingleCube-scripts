@@ -1,3 +1,5 @@
+# Author: Sam Fogarty <samuel.fogarty@colostate.edu>
+
 #!/bin/bash 
 testname="SingleCube_CSU"
 data_dir="/home/herogers/SingleCube/data/run3/LAr/selfTriggered"
