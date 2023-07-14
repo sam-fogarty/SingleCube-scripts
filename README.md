@@ -4,7 +4,7 @@ To run the DUNE ND simulation chain to make simulations for SingleCube, the step
 
 2. Run larnd-sim (https://github.com/DUNE/larnd-sim), which is a python and GPU based program that simulates the near detector and its prototypes (including charge and light propagation, electronics, and light detectors). larnd-sim has a python script cli/dumpTree.py that converts the edep-sim ROOT file to an h5fy h5 file. This file is the type needed for larnd-sim, and is also the same type that is used to format the data from detectors.
 
-3. X reconstruction software
+3. Run reconstruction software. Some of the analysis plotting scripts in this repository require the output of `ndlar_hitfinder`. This is code that uses DBSCAN to convert packets to hits and cluster hits. https://github.com/sam-fogarty/ndlar_hitfinder
 
 For running larnd-sim and some reconstructions, you may want json files that list the larpix config / pedestals per larpix channel. These can be made by using scripts at https://github.com/larpix/larpix-v2-testing-scripts/tree/master/event-display. In particular:
 
