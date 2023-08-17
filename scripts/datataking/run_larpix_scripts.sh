@@ -1,6 +1,8 @@
 #!/bin/bash
+### Helper script for running the LArPix DAQ scripts
+# Author: Sam Fogarty
+# samuel.fogarty@colostate.edu
 
-# check power parameters
 io_group=1
 pacman_tile=1
 tile_id=3
@@ -14,6 +16,8 @@ trigger_rate_folder=trigger_rate_files
 mkdir -p $trigger_rate_folder
 pedestal_second_folder=pedestal_disabled_second
 mkdir -p $pedestal_second_folder
+recursive_pedestal_folder=recursive_pedestals
+mkdir -p $recursive_pedestal_folder
 
 echo " "
 echo "This is a helper script for running the LArPix data-taking scripts with a LArTPC. Before running any of these scripts, make sure the TPC is connected to the PACMAN, everything is powered up, and the current draw looks reasonable."
@@ -334,24 +338,48 @@ while true; do
             shopt -s nullglob
             pedestal_second_files=( *second*.json )
             shopt -u nullglob
+
+            shopt -s nullglob
+            recursive_pedestal_files=( *recursive-pedestal*.h5 )
+            shopt -u nullglob
             if [ ${#pedestal_second_files[@]} -eq 0 ]; then
-                echo "No pedestal disabled files found in current directory, moving on."
+                echo "No pedestal disabled jsons found in current directory, moving on."
                 echo " "
             else
-                echo "Enter the number corresponding to the pedestal disabled file you want to rename:"
+                echo "Enter the number corresponding to the recursive pedestal file you want to rename:"
                 count=1
-                for file in "${pedestal_second_files[@]}"; do
+                for file in "${recursive_pedestal_files[@]}"; do
                     echo "$count. $file"
                     count=$((count+1))
                 done
                 read choice
                 echo "Enter file descriptor (no spaces):"
                 read descriptor
-                selected_file="${pedestal_second_files[$choice-1]}"
+                selected_file="${recursive_pedestal_files[$choice-1]}"
                 base_name=$(basename "$selected_file" .json)
                 new_file="${base_name}_${descriptor}.json"
                 mv "$selected_file" "$pedestal_second_folder/$new_file"
                 echo "File has been moved to: $pedestal_second_folder/$new_file"
+                echo " "
+            fi
+            if [ ${#recursive_pedestal_files[@]} -eq 0 ]; then
+                echo "No recursive pedestal files found in current directory, moving on."
+                echo " "
+            else
+                echo "Enter the number corresponding to the pedestal disabled file you want to rename:"
+                count=1
+                for file in "${recursive_pedestal_files[@]}"; do
+                    echo "$count. $file"
+                    count=$((count+1))
+                done
+                read choice
+                echo "Enter file descriptor (no spaces):"
+                read descriptor
+                selected_file="${recursive_pedestal_files[$choice-1]}"
+                base_name=$(basename "$selected_file" .json)
+                new_file="${base_name}_${descriptor}.json"
+                mv "$selected_file" "$recursive_pedestal_folder/$new_file"
+                echo "File has been moved to: $recursive_pedestal_folder/$new_file"
                 echo " "
             fi
         fi
