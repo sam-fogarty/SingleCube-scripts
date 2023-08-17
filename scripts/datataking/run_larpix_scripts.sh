@@ -8,16 +8,23 @@ pacman_tile=1
 tile_id=3
 geometry_yaml=layout-2.4.0.yaml
 
-hydra_json_folder=hydra_network_jsons
+hydra_json_folder=hydra_network
 mkdir -p $hydra_json_folder
-hydra_plot_folder=hydra_network_images
+hydra_plot_folder=plots
 mkdir -p $hydra_plot_folder
-trigger_rate_folder=trigger_rate_files
+trigger_rate_folder=trigger_rate_do_not_enable
 mkdir -p $trigger_rate_folder
-pedestal_second_folder=pedestal_disabled_second
+trigger_rate_no_cut=trigger_rate_no_cut
+mkdir -p $trigger_rate_no_cut
+pedestal_second_folder=pedestal_disabled_list_second
 mkdir -p $pedestal_second_folder
-recursive_pedestal_folder=recursive_pedestals
+pedestal_first_folder=pedestal_disabled_list_first
+mkdir -p $pedestal_first_folder
+recursive_pedestal_folder=recursive_pedestal
 mkdir -p $recursive_pedestal_folder
+trigger_rate_10kHz=trigger_rate_10kHz_cut
+mkdir -p $trigger_rate_10kHz
+
 
 echo " "
 echo "This is a helper script for running the LArPix data-taking scripts with a LArTPC. Before running any of these scripts, make sure the TPC is connected to the PACMAN, everything is powered up, and the current draw looks reasonable."
@@ -117,22 +124,23 @@ while true; do
                     echo "$count. $file"
                     count=$((count+1))
             done
-            read hydra_network_file
-            if [ "$hydra_network_file" -eq "0" ]; then
+            read choice
+            if [ "$choice" -eq "0" ]; then
                 while true; do
                     echo "Please enter the path to hydra network file to use:"
                     echo "(You can use ls and pwd commands here to look around)"
-                    read hydra_network_file
+                    read choice_2
 
-                    if [[ $hydra_network_file == ls* ]]; then
-                        eval "$hydra_network_file"
-                    elif [[ $hydra_network_file == pwd* ]]; then
-                        eval "$hydra_network_file"
+                    if [[ $choice_2 == ls* ]]; then
+                        eval "$choice_2"
+                    elif [[ $choice_2 == pwd* ]]; then
+                        eval "$choice_2"
                     else
                         break
                     fi
                 done
             fi
+	    hydra_network_file="${json_files[$choice-1]}"
         fi
         echo "python3 plot_hydra_network_v2a.py --controller_config $hydra_network_file --geometry_yaml $geometry_yaml --io_group $io_group"
         python3 plot_hydra_network_v2a.py --controller_config $hydra_network_file --geometry_yaml $geometry_yaml --io_group $io_group
@@ -161,6 +169,8 @@ while true; do
                 new_file="${base_name}_${descriptor}.png"
                 mv "$selected_file" "$hydra_plot_folder/$new_file"
                 echo "File has been moved to: $hydra_plot_folder/$new_file"
+		echo "Displaying plot. Close plot window to continue."
+		display $hydra_plot_folder/$new_file
             fi
         fi
     elif [ "$number" == "4" ]; then
@@ -214,7 +224,7 @@ while true; do
         read input_trigger_rate
         if [ "$input_trigger_rate" -eq "2" ]; then
             shopt -s nullglob
-            trigger_rate_files=( *DO-NOT-ENABLE*.h5 )
+            trigger_rate_files=( *DO-NOT-ENABLE*.json )
             shopt -u nullglob
             if [ ${#trigger_rate_files[@]} -eq 0 ]; then
                 echo "No trigger rate files found in the current directory to rename, moving on."
@@ -233,6 +243,8 @@ while true; do
                 base_name=$(basename "$selected_file" .json)
                 new_file="${base_name}_${descriptor}.json"
                 mv "$selected_file" "$trigger_rate_folder/$new_file"
+		mv *10kHz*.h5 $trigger_rate_10kHz/
+		mv *no_cut*.h5 $trigger_rate_no_cut/
                 echo "File has been moved to: $trigger_rate_folder/$new_file"
                 echo " "
             fi
