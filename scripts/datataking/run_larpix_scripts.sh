@@ -24,7 +24,8 @@ recursive_pedestal_folder=recursive_pedestal
 mkdir -p $recursive_pedestal_folder
 trigger_rate_10kHz=trigger_rate_10kHz_cut
 mkdir -p $trigger_rate_10kHz
-
+asics_configs=asics-configs
+mkdir -p $asics_configs
 
 echo " "
 echo "This is a helper script for running the LArPix data-taking scripts with a LArTPC. Before running any of these scripts, make sure the TPC is connected to the PACMAN, everything is powered up, and the current draw looks reasonable."
@@ -37,6 +38,7 @@ while true; do
     echo "3 - plot_hydra_network_v2a.py (make hydra network plot)"
     echo "4 - multi_trigger_rate_qc.py (make trigger rate disabled channel list)"
     echo "5 - pedestal_qc.py (make pedestal disabled channel list)"
+    echo "6 - self-trigger run"
     read number
 
     # Check if the user wants to quit
@@ -342,7 +344,7 @@ while true; do
         fi
         echo " "
         echo "python3 pedestal_qc.py --controller_config $selected_file --disabled_list $selected_do_not_enable_list"
-        python3 pedestal_qc.py --controller_config $selected_file --disabled_list $selected_do_not_enable_list
+        #python3 pedestal_qc.py --controller_config $selected_file --disabled_list $selected_do_not_enable_list
         echo "To retry, enter 1 and repick pedestal_qc.py."
         echo "To continue, enter 2."
         read input_pedestal
@@ -360,17 +362,18 @@ while true; do
             else
                 echo "Enter the number corresponding to the recursive pedestal file you want to rename:"
                 count=1
-                for file in "${recursive_pedestal_files[@]}"; do
+                for file in "${pedestal_second_files[@]}"; do
                     echo "$count. $file"
                     count=$((count+1))
                 done
                 read choice
                 echo "Enter file descriptor (no spaces):"
                 read descriptor
-                selected_file="${recursive_pedestal_files[$choice-1]}"
+                selected_file="${pedestal_second_files[$choice-1]}"
                 base_name=$(basename "$selected_file" .json)
                 new_file="${base_name}_${descriptor}.json"
                 mv "$selected_file" "$pedestal_second_folder/$new_file"
+                mv *first*.h5 $pedestal_first_folder/
                 echo "File has been moved to: $pedestal_second_folder/$new_file"
                 echo " "
             fi
@@ -395,6 +398,96 @@ while true; do
                 echo " "
             fi
         fi
+    elif [ "$number" == "6" ]; then
+        shopt -s nullglob
+        json_files=( $hydra_json_folder/*hydra*.json )
+        shopt -u nullglob
+        if [ ${#json_files[@]} -eq 0 ]; then
+            echo "No .json files found in $hydra_json_folder, please enter path to hydra network file to use:"
+            while true; do
+                echo "(You can use ls and pwd commands here to look around)"
+                read selected_file
+ 
+                if [[ $selected_file == ls* ]]; then
+                    eval "$selected_file"
+                elif [[ $selected_file == pwd* ]]; then
+                    eval "$selected_file"
+                else
+                    break
+                fi
+            done
+        else
+            echo "Enter the number corresponding to hydra network file to use (enter 0 to manually enter path):"
+            count=1
+            for file in "${json_files[@]}"; do
+                    echo "$count. $file"
+                    count=$((count+1))
+            done
+            read json_choice
+            if [ "$json_choice" -eq "0" ]; then
+                echo "Please enter path to hydra network file to use:"
+                while true; do
+                    echo "(You can use ls and pwd commands here to look around)"
+                    read selected_file
+
+                    if [[ $selected_file == ls* ]]; then
+                        eval "$selected_file"
+                    elif [[ $selected_file == pwd* ]]; then
+                        eval "$selected_file"
+                    else
+                        break
+                    fi
+                done
+ 
+            else
+                selected_file="${json_files[$json_choice-1]}"
+            fi
+        fi
+        asics_folders=( "$asics_configs"/*/ )
+        asics_folders=( "${asics_folders[@]%/}" ) # trim trailing slashes 
+        if [ ${#asics_folders[@]} -eq 0 ]; then
+            echo "No asics configs found in $asics_configs, please enter path asic folder to use:"
+            while true; do
+                echo "(You can use ls and pwd commands here to look around)"
+                read selected_folder
+                if [[ $selected_folder == ls* ]]; then
+                    eval "$selected_folder"
+                elif [[ $selected_folder == pwd* ]]; then
+                    eval "$selected_folder"
+                else
+                    break
+                fi
+            done
+        else
+            echo "Enter the number corresponding to the asics config folder that you want to use (enter 0 to manually enter path):"
+            count=1
+            for file in "${asics_folders[@]}"; do
+                    echo "$count. $file"
+                    count=$((count+1))
+            done
+            read asics_choice
+            if [ "$asics_choice" -eq "0" ]; then
+                echo "Please enter path to asics configs folder to use:"
+                while true; do
+                    echo "(You can use ls and pwd commands here to look around)"
+                    read selected_folder
+
+                    if [[ $selected_folder == ls* ]]; then
+                        eval "$selected_folder"
+                    elif [[ $selected_folder == pwd* ]]; then
+                        eval "$selected_folder"
+                    else
+                        break
+                    fi
+                done
+            else
+                selected_folder="${asics_folders[$asics_choice-1]}"
+            fi
+        fi
+        echo "Enter runtime in seconds:"
+        read runtime
+        echo "python3 start_run_log_raw.py --controller_config $selected_file --config_name $selected_folder --runtime $runtime"
+        python3 start_run_log_raw.py --controller_config $selected_file --config_name $selected_folder --runtime $runtime
     else
         echo "Invalid choice. Please enter 1, 2, 3, 4, or 'q' to quit."
     fi
