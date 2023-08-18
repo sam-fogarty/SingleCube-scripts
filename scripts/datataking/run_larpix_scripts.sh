@@ -26,6 +26,8 @@ trigger_rate_10kHz=trigger_rate_10kHz_cut
 mkdir -p $trigger_rate_10kHz
 asics_configs=asics-configs
 mkdir -p $asics_configs
+disabled_channel_plots=disabled_channel_plots
+mkdir -p $disabled_channel_plots
 
 echo " "
 echo "This is a helper script for running the LArPix data-taking scripts with a LArTPC. Before running any of these scripts, make sure the TPC is connected to the PACMAN, everything is powered up, and the current draw looks reasonable."
@@ -38,7 +40,8 @@ while true; do
     echo "3 - plot_hydra_network_v2a.py (make hydra network plot)"
     echo "4 - multi_trigger_rate_qc.py (make trigger rate disabled channel list)"
     echo "5 - pedestal_qc.py (make pedestal disabled channel list)"
-    echo "6 - self-trigger run"
+    echo "6 - plot_xy_disabled_channel.py (make disabled channel plots)"
+    echo "7 - self-trigger run"
     read number
 
     # Check if the user wants to quit
@@ -399,6 +402,283 @@ while true; do
             fi
         fi
     elif [ "$number" == "6" ]; then
+        echo "Choose option for plotting disabled channels:"
+        echo "1 - Plot only trigger-rate disabled channels"
+        echo "2 - Plot only pedestal disabled channels"
+        echo "3 - Plot both trigger-rate and pedestal disabled channels"
+        read disabled_channel_choice
+        if [ "$disabled_channel_choice" == "1" ]; then
+            shopt -s nullglob
+            trigger_rate_disabled_files=( $trigger_rate_folder/*.json )
+            shopt -u nullglob
+            if [ ${#trigger_rate_disabled_files[@]} -eq 0 ]; then
+                echo "No .json files found in $trigger_rate_folder, please enter path to trigger-rate disabled channel json file to use:"
+                while true; do
+                    echo "(You can use ls and pwd commands here to look around)"
+                    read selected_file
+    
+                    if [[ $selected_file == ls* ]]; then
+                        eval "$selected_file"
+                    elif [[ $selected_file == pwd* ]]; then
+                        eval "$selected_file"
+                    else
+                        break
+                    fi
+                done
+            else 
+                echo "Enter the number corresponding to trigger-rate disabled channel json file to use (enter 0 to manually enter path):"
+                count=1
+                for file in "${trigger_rate_disabled_files[@]}"; do
+                        echo "$count. $file"
+                        count=$((count+1))
+                done
+                read json_choice
+                if [ "$json_choice" -eq "0" ]; then
+                    echo "Please enter path to disabled channel json to use:"
+                    while true; do
+                        echo "(You can use ls and pwd commands here to look around)"
+                        read selected_file
+
+                        if [[ $selected_file == ls* ]]; then
+                            eval "$selected_file"
+                        elif [[ $selected_file == pwd* ]]; then
+                            eval "$selected_file"
+                        else
+                            break
+                        fi
+                    done
+                else
+                    selected_file="${trigger_rate_disabled_files[$json_choice-1]}"
+                fi
+            fi
+            python3 plot_xy_disabled_channel.py --trigger_disabled $selected_file
+            echo "Script finished, check output."
+            echo " "
+            echo "To retry, enter 1 and repick plot_xy_disabled_channel.py. Otherwise enter 2 to continue."
+            read choice
+            if [ "$choice" -eq "2" ]; then
+                echo "Enter the number corresponding to disabled channel plot for renaming: "
+                shopt -s nullglob
+                png_files=( *.png )
+                shopt -u nullglob
+                if [ ${#png_files[@]} -eq 0 ]; then
+                    echo "No .png files found in the current directory to rename, moving on."
+                else
+                    count=1
+                    for file in "${png_files[@]}"; do
+                            echo "$count. $file"
+                            count=$((count+1))
+                    done
+                    read choice
+                    echo "Enter file descriptor (no spaces):"
+                    read descriptor
+                    selected_file="${png_files[$choice-1]}"
+                    base_name=$(basename "$selected_file" .png)
+                    new_file="${base_name}_${descriptor}.png"
+                    mv "$selected_file" "$disabled_channel_plots/$new_file"
+                    echo "File has been moved to: $disabled_channel_plots/$new_file"
+                    echo "Displaying plot. Close plot window to continue."
+                    display $disabled_channel_plots/$new_file
+                fi
+            fi            
+            
+        elif [ "$disabled_channel_choice" == "2" ]; then
+            shopt -s nullglob
+            pedestal_disabled_files=( $pedestal_second_folder/*.json )
+            shopt -u nullglob
+            if [ ${#pedestal_disabled_files[@]} -eq 0 ]; then
+                echo "No .json files found in $pedestal_second_folder, please enter path to pedestal disabled channel json file to use:"
+                while true; do
+                    echo "(You can use ls and pwd commands here to look around)"
+                    read selected_file
+    
+                    if [[ $selected_file == ls* ]]; then
+                        eval "$selected_file"
+                    elif [[ $selected_file == pwd* ]]; then
+                        eval "$selected_file"
+                    else
+                        break
+                    fi
+                done
+            else 
+                echo "Enter the number corresponding to pedestal disabled channel json file to use (enter 0 to manually enter path):"
+                count=1
+                for file in "${pedestal_disabled_files[@]}"; do
+                        echo "$count. $file"
+                        count=$((count+1))
+                done
+                read json_choice
+                if [ "$json_choice" -eq "0" ]; then
+                    echo "Please enter path to disabled channel json to use:"
+                    while true; do
+                        echo "(You can use ls and pwd commands here to look around)"
+                        read selected_file
+
+                        if [[ $selected_file == ls* ]]; then
+                            eval "$selected_file"
+                        elif [[ $selected_file == pwd* ]]; then
+                            eval "$selected_file"
+                        else
+                            break
+                        fi
+                    done
+                else
+                    selected_file="${pedestal_disabled_files[$json_choice-1]}"
+                fi
+            fi
+            python3 plot_xy_disabled_channel.py --pedestal_disabled $selected_file
+            echo "Script finished, check output."
+            echo " "
+            echo "To retry, enter 1 and repick plot_xy_disabled_channel.py. Otherwise enter 2 to continue."
+            read choice
+            if [ "$choice" -eq "2" ]; then
+                echo "Enter the number corresponding to disabled channel plot for renaming: "
+                shopt -s nullglob
+                png_files=( *.png )
+                shopt -u nullglob
+                if [ ${#png_files[@]} -eq 0 ]; then
+                    echo "No .png files found in the current directory to rename, moving on."
+                else
+                    count=1
+                    for file in "${png_files[@]}"; do
+                            echo "$count. $file"
+                            count=$((count+1))
+                    done
+                    read choice
+                    echo "Enter file descriptor (no spaces):"
+                    read descriptor
+                    selected_file="${png_files[$choice-1]}"
+                    base_name=$(basename "$selected_file" .png)
+                    new_file="${base_name}_${descriptor}.png"
+                    mv "$selected_file" "$disabled_channel_plots/$new_file"
+                    echo "File has been moved to: $disabled_channel_plots/$new_file"
+                    echo "Displaying plot. Close plot window to continue."
+                    display $disabled_channel_plots/$new_file
+                fi
+            fi
+                 
+        elif [ "$disabled_channel_choice" == "3" ]; then
+            shopt -s nullglob
+            pedestal_disabled_files=( $pedestal_second_folder/*.json )
+            shopt -u nullglob
+
+            shopt -s nullglob
+            trigger_rate_disabled_files=( $trigger_rate_folder/*.json )
+            shopt -u nullglob
+
+            if [ ${#pedestal_disabled_files[@]} -eq 0 ]; then
+                echo "No .json files found in $pedestal_second_folder, please enter path to pedestal disabled channel json file to use:"
+                while true; do
+                    echo "(You can use ls and pwd commands here to look around)"
+                    read selected_file
+    
+                    if [[ $selected_file == ls* ]]; then
+                        eval "$selected_file"
+                    elif [[ $selected_file == pwd* ]]; then
+                        eval "$selected_file"
+                    else
+                        break
+                    fi
+                done
+            else 
+                echo "Enter the number corresponding to pedestal disabled channel json file to use (enter 0 to manually enter path):"
+                count=1
+                for file in "${pedestal_disabled_files[@]}"; do
+                        echo "$count. $file"
+                        count=$((count+1))
+                done
+                read json_choice
+                if [ "$json_choice" -eq "0" ]; then
+                    echo "Please enter path to disabled channel json to use:"
+                    while true; do
+                        echo "(You can use ls and pwd commands here to look around)"
+                        read selected_file
+
+                        if [[ $selected_file == ls* ]]; then
+                            eval "$selected_file"
+                        elif [[ $selected_file == pwd* ]]; then
+                            eval "$selected_file"
+                        else
+                            break
+                        fi
+                    done
+                else
+                    selected_pedestal_file="${pedestal_disabled_files[$json_choice-1]}"
+                fi
+            fi
+            if [ ${#trigger_rate_disabled_files[@]} -eq 0 ]; then
+                echo "No .json files found in $trigger_rate_folder, please enter path to trigger-rate disabled channel json file to use:"
+                while true; do
+                    echo "(You can use ls and pwd commands here to look around)"
+                    read selected_file
+    
+                    if [[ $selected_file == ls* ]]; then
+                        eval "$selected_file"
+                    elif [[ $selected_file == pwd* ]]; then
+                        eval "$selected_file"
+                    else
+                        break
+                    fi
+                done
+            else 
+                echo "Enter the number corresponding to trigger-rate disabled channel json file to use (enter 0 to manually enter path):"
+                count=1
+                for file in "${trigger_rate_disabled_files[@]}"; do
+                        echo "$count. $file"
+                        count=$((count+1))
+                done
+                read json_choice
+                if [ "$json_choice" -eq "0" ]; then
+                    echo "Please enter path to disabled channel json to use:"
+                    while true; do
+                        echo "(You can use ls and pwd commands here to look around)"
+                        read selected_file
+
+                        if [[ $selected_file == ls* ]]; then
+                            eval "$selected_file"
+                        elif [[ $selected_file == pwd* ]]; then
+                            eval "$selected_file"
+                        else
+                            break
+                        fi
+                    done
+                else
+                    selected_trigger_file="${trigger_rate_disabled_files[$json_choice-1]}"
+                fi    
+            fi
+            python3 plot_xy_disabled_channel.py --pedestal_disabled $selected_pedestal_file --trigger_disabled $selected_trigger_file
+            echo "Script finished, check output."
+            echo " "
+            echo "To retry, enter 1 and repick plot_xy_disabled_channel.py. Otherwise enter 2 to continue."
+            read choice
+            if [ "$choice" -eq "2" ]; then
+                echo "Enter the number corresponding to disabled channel plot for renaming: "
+                shopt -s nullglob
+                png_files=( *.png )
+                shopt -u nullglob
+                if [ ${#png_files[@]} -eq 0 ]; then
+                    echo "No .png files found in the current directory to rename, moving on."
+                else
+                    count=1
+                    for file in "${png_files[@]}"; do
+                            echo "$count. $file"
+                            count=$((count+1))
+                    done
+                    read choice
+                    echo "Enter file descriptor (no spaces):"
+                    read descriptor
+                    selected_file="${png_files[$choice-1]}"
+                    base_name=$(basename "$selected_file" .png)
+                    new_file="${base_name}_${descriptor}.png"
+                    mv "$selected_file" "$disabled_channel_plots/$new_file"
+                    echo "File has been moved to: $disabled_channel_plots/$new_file"
+                    echo "Displaying plot. Close plot window to continue."
+                    display $disabled_channel_plots/$new_file
+                fi
+            fi   
+                   
+        fi
+    elif [ "$number" == "7" ]; then
         shopt -s nullglob
         json_files=( $hydra_json_folder/*hydra*.json )
         shopt -u nullglob
