@@ -26,8 +26,12 @@ trigger_rate_10kHz=trigger_rate_10kHz_cut
 mkdir -p $trigger_rate_10kHz
 asics_configs=asics-configs
 mkdir -p $asics_configs
-disabled_channel_plots=disabled_channel_plots
+disabled_channel_plots=plots
 mkdir -p $disabled_channel_plots
+power_up_jsons=power_up_jsons
+mkdir -p $power_up_jsons
+pedestal_and_trigger_rate=pedestal_and_trigger_rate
+mkdir -p $pedestal_and_trigger_rate
 
 echo " "
 echo "This is a helper script for running the LArPix data-taking scripts with a LArTPC. Before running any of these scripts, make sure the TPC is connected to the PACMAN, everything is powered up, and the current draw looks reasonable."
@@ -41,7 +45,7 @@ while true; do
     echo "4 - multi_trigger_rate_qc.py (make trigger rate disabled channel list)"
     echo "5 - pedestal_qc.py (make pedestal disabled channel list)"
     echo "6 - plot_xy_disabled_channel.py (make disabled channel plots)"
-    echo "7 - self-trigger run"
+    echo "7 - start_run_log_raw.py (self-trigger run)"
     read number
 
     # Check if the user wants to quit
@@ -57,6 +61,7 @@ while true; do
         python3 check_power.py --pacman_tile $pacman_tile --io_group $io_group
         echo "Script finished, check output."
         echo " "
+	mv power-up*.json $power_up_jsons/
 
     elif [ "$number" == "2" ]; then
         echo "Running map_uart_links_qc.py script: "
@@ -347,7 +352,8 @@ while true; do
         fi
         echo " "
         echo "python3 pedestal_qc.py --controller_config $selected_file --disabled_list $selected_do_not_enable_list"
-        #python3 pedestal_qc.py --controller_config $selected_file --disabled_list $selected_do_not_enable_list
+        python3 pedestal_qc.py --controller_config $selected_file --disabled_list $selected_do_not_enable_list
+        mv *pedestal*DO-NOT-ENABLE*.h5 $pedestal_and_trigger_rate/
         echo "To retry, enter 1 and repick pedestal_qc.py."
         echo "To continue, enter 2."
         read input_pedestal
@@ -363,7 +369,7 @@ while true; do
                 echo "No pedestal disabled jsons found in current directory, moving on."
                 echo " "
             else
-                echo "Enter the number corresponding to the recursive pedestal file you want to rename:"
+                echo "Enter the number corresponding to the pedestal second file you want to rename:"
                 count=1
                 for file in "${pedestal_second_files[@]}"; do
                     echo "$count. $file"
@@ -376,7 +382,7 @@ while true; do
                 base_name=$(basename "$selected_file" .json)
                 new_file="${base_name}_${descriptor}.json"
                 mv "$selected_file" "$pedestal_second_folder/$new_file"
-                mv *first*.h5 $pedestal_first_folder/
+                mv *first*.json $pedestal_first_folder/
                 echo "File has been moved to: $pedestal_second_folder/$new_file"
                 echo " "
             fi
@@ -384,7 +390,7 @@ while true; do
                 echo "No recursive pedestal files found in current directory, moving on."
                 echo " "
             else
-                echo "Enter the number corresponding to the pedestal disabled file you want to rename:"
+                echo "Enter the number corresponding to the recursive pedestal file you want to rename:"
                 count=1
                 for file in "${recursive_pedestal_files[@]}"; do
                     echo "$count. $file"
@@ -475,7 +481,7 @@ while true; do
                     read descriptor
                     selected_file="${png_files[$choice-1]}"
                     base_name=$(basename "$selected_file" .png)
-                    new_file="${base_name}_${descriptor}.png"
+                    new_file="${base_name}_trigger-rate_${descriptor}.png"
                     mv "$selected_file" "$disabled_channel_plots/$new_file"
                     echo "File has been moved to: $disabled_channel_plots/$new_file"
                     echo "Displaying plot. Close plot window to continue."
@@ -551,7 +557,7 @@ while true; do
                     read descriptor
                     selected_file="${png_files[$choice-1]}"
                     base_name=$(basename "$selected_file" .png)
-                    new_file="${base_name}_${descriptor}.png"
+                    new_file="${base_name}_pedestal_${descriptor}.png"
                     mv "$selected_file" "$disabled_channel_plots/$new_file"
                     echo "File has been moved to: $disabled_channel_plots/$new_file"
                     echo "Displaying plot. Close plot window to continue."
@@ -672,7 +678,7 @@ while true; do
                     read descriptor
                     selected_file="${png_files[$choice-1]}"
                     base_name=$(basename "$selected_file" .png)
-                    new_file="${base_name}_${descriptor}.png"
+                    new_file="${base_name}_trigger-rate_and_pedestal_${descriptor}.png"
                     mv "$selected_file" "$disabled_channel_plots/$new_file"
                     echo "File has been moved to: $disabled_channel_plots/$new_file"
                     echo "Displaying plot. Close plot window to continue."
