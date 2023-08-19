@@ -451,6 +451,7 @@ while true; do
                     selected_file="${trigger_rate_disabled_files[$json_choice-1]}"
                 fi
             fi
+            echo "python3 plot_xy_disabled_channel.py --trigger_disabled $selected_file"
             python3 plot_xy_disabled_channel.py --trigger_disabled $selected_file
             echo "Script finished, check output."
             echo " "
@@ -526,6 +527,7 @@ while true; do
                     selected_file="${pedestal_disabled_files[$json_choice-1]}"
                 fi
             fi
+            echo "python3 plot_xy_disabled_channel.py --pedestal_disabled $selected_file"
             python3 plot_xy_disabled_channel.py --pedestal_disabled $selected_file
             echo "Script finished, check output."
             echo " "
@@ -646,6 +648,7 @@ while true; do
                     selected_trigger_file="${trigger_rate_disabled_files[$json_choice-1]}"
                 fi    
             fi
+            echo "python3 plot_xy_disabled_channel.py --pedestal_disabled $selected_pedestal_file --trigger_disabled $selected_trigger_file"
             python3 plot_xy_disabled_channel.py --pedestal_disabled $selected_pedestal_file --trigger_disabled $selected_trigger_file
             echo "Script finished, check output."
             echo " "
