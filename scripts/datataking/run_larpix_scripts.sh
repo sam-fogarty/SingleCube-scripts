@@ -32,6 +32,8 @@ power_up_jsons=power_up_jsons
 mkdir -p $power_up_jsons
 pedestal_and_trigger_rate=pedestal_and_trigger_rate
 mkdir -p $pedestal_and_trigger_rate
+raw_data=/mount/sda1/SingleCube_092023/warm_fullTPC_noShielding/raw_data
+converted_data=/mount/sda1/SingleCube_092023/warm_fullTPC_noShielding/converted_data
 
 echo " "
 echo "This is a helper script for running the LArPix data-taking scripts with a LArTPC. Before running any of these scripts, make sure the TPC is connected to the PACMAN, everything is powered up, and the current draw looks reasonable."
@@ -45,7 +47,9 @@ while true; do
     echo "4 - multi_trigger_rate_qc.py (make trigger rate disabled channel list)"
     echo "5 - pedestal_qc.py (make pedestal disabled channel list)"
     echo "6 - plot_xy_disabled_channel.py (make disabled channel plots)"
-    echo "7 - start_run_log_raw.py (self-trigger run)"
+    echo "7 - threshold_qc.py (make thresholds)"
+    echo "8 - start_run_log_raw.py (self-trigger run)"
+    echo "9 - convert_rawhdf5_to_hdf5.py (convert raw file to packets file)"
     read number
 
     # Check if the user wants to quit
@@ -400,8 +404,8 @@ while true; do
                 echo "Enter file descriptor (no spaces):"
                 read descriptor
                 selected_file="${recursive_pedestal_files[$choice-1]}"
-                base_name=$(basename "$selected_file" .json)
-                new_file="${base_name}_${descriptor}.json"
+                base_name=$(basename "$selected_file" .h5)
+                new_file="${base_name}_${descriptor}.h5"
                 mv "$selected_file" "$recursive_pedestal_folder/$new_file"
                 echo "File has been moved to: $recursive_pedestal_folder/$new_file"
                 echo " "
@@ -695,6 +699,147 @@ while true; do
             echo "No .json files found in $hydra_json_folder, please enter path to hydra network file to use:"
             while true; do
                 echo "(You can use ls and pwd commands here to look around)"
+                read hydra_network_selected_file
+ 
+                if [[ $hydra_network_selected_file == ls* ]]; then
+                    eval "$hydra_network_selected_file"
+                elif [[ $hydra_network_selected_file == pwd* ]]; then
+                    eval "$hydra_network_selected_file"
+                else
+                    break
+                fi
+            done
+        else
+            echo "Enter the number corresponding to hydra network file to use (enter 0 to manually enter path):"
+            count=1
+            for file in "${json_files[@]}"; do
+                    echo "$count. $file"
+                    count=$((count+1))
+            done
+            read json_choice
+            if [ "$json_choice" -eq "0" ]; then
+                echo "Please enter path to hydra network file to use:"
+                while true; do
+                    echo "(You can use ls and pwd commands here to look around)"
+                    read hydra_network_selected_file
+
+                    if [[ $hydra_network_selected_file == ls* ]]; then
+                        eval "$hydra_network_selected_file"
+                    elif [[ $hydra_network_selected_file == pwd* ]]; then
+                        eval "$hydra_network_selected_file"
+                    else
+                        break
+                    fi
+                done
+ 
+            else
+                hydra_network_selected_file="${json_files[$json_choice-1]}"
+            fi
+        fi
+
+        shopt -s nullglob
+    	pedestal_disabled_files=( $pedestal_second_folder/*.json )
+	shopt -u nullglob
+	if [ ${#pedestal_disabled_files[@]} -eq 0 ]; then
+		echo "No .json files found in $pedestal_second_folder, please enter path to pedestal disabled channel json file to use:"
+                while true; do
+                    echo "(You can use ls and pwd commands here to look around)"
+                    read pedestal_disabled_selected_file
+    
+                    if [[ $pedestal_disabled_selected_file == ls* ]]; then
+                        eval "$pedestal_disabled_selected_file"
+                    elif [[ $pedestal_disabled_selected_file == pwd* ]]; then
+                        eval "$pedestal_disabled_selected_file"
+                    else
+                        break
+                    fi
+                done
+    	else 
+                echo "Enter the number corresponding to pedestal disabled channel json file to use (enter 0 to manually enter path):"
+                count=1
+                for file in "${pedestal_disabled_files[@]}"; do
+                        echo "$count. $file"
+                        count=$((count+1))
+                done
+                read json_choice
+                if [ "$json_choice" -eq "0" ]; then
+                    echo "Please enter path to disabled channel json to use:"
+                    while true; do
+                        echo "(You can use ls and pwd commands here to look around)"
+                        read pedestal_disabled_selected_file
+
+                        if [[ $pedestal_disabled_selected_file == ls* ]]; then
+                            eval "$pedestal_disabled_selected_file"
+                        elif [[ $pedestal_disabled_selected_file == pwd* ]]; then
+                            eval "$pedestal_disabled_selected_file"
+                        else
+                            break
+                        fi
+                    done
+                else
+                    pedestal_disabled_selected_file="${pedestal_disabled_files[$json_choice-1]}"
+                fi
+	fi
+
+	shopt -s nullglob
+    	recursive_pedestal_files=( $recursive_pedestal_folder/*.h5 )
+	shopt -u nullglob
+	if [ ${#recursive_pedestal_files[@]} -eq 0 ]; then
+                echo "No h5 files found in $recursive_pedestal_folder, please enter path to the recursive pedestal h5 file to use:"
+                while true; do
+                    echo "(You can use ls and pwd commands here to look around)"
+                    read recursive_pedestal_selected_file
+    
+                    if [[ $recursive_pedestal_selected_file == ls* ]]; then
+                        eval "$recursive_pedestal_selected_file"
+                    elif [[ $recursive_pedestal_selected_file == pwd* ]]; then
+                        eval "$recursive_pedestal_selected_file"
+                    else
+                        break
+                    fi
+                done
+	else 
+                echo "Enter the number corresponding to recursive pedestal h5 file to use (enter 0 to manually enter path):"
+                count=1
+                for file in "${recursive_pedestal_files[@]}"; do
+                        echo "$count. $file"
+                        count=$((count+1))
+                done
+                read h5_choice
+                if [ "$h5_choice" -eq "0" ]; then
+                    echo "Please enter path to recursive pedestal h5 file to use:"
+                    while true; do
+                        echo "(You can use ls and pwd commands here to look around)"
+                        read recursive_pedestal_selected_file
+
+                        if [[ $recursive_pedestal_selected_file == ls* ]]; then
+                            eval "$recursive_pedestal_selected_file"
+                        elif [[ $recursive_pedestal_selected_file == pwd* ]]; then
+                            eval "$recursive_pedestal_selected_file"
+                        else
+                            break
+                        fi
+                    done
+                else
+                    recursive_pedestal_selected_file="${recursive_pedestal_files[$h5_choice-1]}"
+                fi
+	fi        
+        echo "python3 threshold_qc.py --controller_config $hydra_network_selected_file --disabled_list $pedestal_disabled_selected_file --pedestal_file $recursive_pedestal_selected_file"
+        #python3 threshold_qc.py --controller_config $hydra_network_selected_file --disabled_list $pedestal_disabled_selected_file --pedestal_file $recursive_pedestal_selected_file
+        
+        echo "Enter a folder descriptor for asics-configs (folder will be named asics-configs_<file descriptor>): "
+	read asics_descriptor
+	mkdir -p $asics_configs/asics-configs_$asics_descriptor
+	mv *config*.json $asics_configs/asics-configs_$asics_descriptor/
+	echo "Asic config jsons moved to $asics_configs/asics-configs_$asics_descriptor/" 
+    elif [ "$number" == "8" ]; then
+        shopt -s nullglob
+        json_files=( $hydra_json_folder/*hydra*.json )
+        shopt -u nullglob
+        if [ ${#json_files[@]} -eq 0 ]; then
+            echo "No .json files found in $hydra_json_folder, please enter path to hydra network file to use:"
+            while true; do
+                echo "(You can use ls and pwd commands here to look around)"
                 read selected_file
  
                 if [[ $selected_file == ls* ]]; then
@@ -777,7 +922,99 @@ while true; do
         read runtime
         echo "python3 start_run_log_raw.py --controller_config $selected_file --config_name $selected_folder --runtime $runtime"
         python3 start_run_log_raw.py --controller_config $selected_file --config_name $selected_folder --runtime $runtime
+	echo "Convert raw file to packets hdf5 file now? (yes/no)"
+	read convert_choice
+        if [ "$convert_choice" == "yes" ]; then
+		shopt -s nullglob
+		raw_files=( *raw*.h5 )
+		shopt -u nullglob
+                if [ ${#raw_files[@]} -eq 0 ]; then
+			echo "No raw h5 files found in current directory, moving on."
+		else
+			echo "Enter the number corresponding to the raw hdf5 file you want to convert:"
+                	count=1
+                	for file in "${raw_files[@]}"; do
+                    		echo "$count. $file"
+                    		count=$((count+1))
+                	done
+                	read choice
+			selected_file="${raw_files[$choice-1]}"
+			file_no_extension=${selected_file%*.h5}
+			timestamp=${file_no_extension#*raw_}
+			converted_filename=datalog_${timestamp}.h5
+			echo "Converting raw file $selected_file to HDF5 file $converted_filename..."
+			echo "python3 ../larpix-control/scripts/convert_rawhdf5_to_hdf5.py -i $selected_file -o $converted_filename"
+			python3 ../larpix-control/scripts/convert_rawhdf5_to_hdf5.py -i $selected_file -o $converted_data/$converted_filename
+			mv $selected_file $raw_data/
+			echo "Moved $selected_file to $raw_data/$selected_file"
+			echo "Saved converted hdf5 file (if the conversion succeeded) to $converted_data/$converted_filename"
+		fi
+	else
+		mv *raw*.h5 $raw_data/
+	fi
+    elif [ "$number" == "9" ]; then
+		current_dir=$(pwd)
+		cd $raw_data
+		converter_dir=/home/herogers/SingleCube/larpix-control/scripts
+		shopt -s nullglob
+		raw_files=( *raw*.h5 )
+		shopt -u nullglob
+                if [ ${#raw_files[@]} -eq 0 ]; then
+			echo "No raw h5 files found in $raw_data, please enter path to file to convert:"
+			cd $current_dir
+			while true; do
+                		echo "(You can use ls, pwd, and cd commands here to look around. Must cd to directory containing file to convert)"
+                		read selected_file
+                		if [[ $selected_file == ls* ]]; then
+                    			eval "$selected_file"
+                		elif [[ $selected_file == pwd* ]]; then
+                    			eval "$selected_file"
+                		elif [[ $selected_file == cd* ]]; then
+					eval "$selected_file"
+				else
+                    			break
+                		fi
+            		done
+		else
+			echo "Enter the number corresponding to the raw hdf5 file you want to convert (enter 0 to manually enter path):"
+			count=1
+			for file in "${raw_files[@]}"; do
+				echo "$count. $file"
+				count=$((count+1))
+			done
+			read h5_choice
+			if [ "$h5_choice" -eq "0" ]; then
+              			echo "Please enter path to raw hdf5 file to convert:"
+                		while true; do
+                    			echo "(You can use ls, cd, and pwd commands here to look around. Must cd to directory containing file to convert)"
+                    			read selected_file
+					cd $current_dir
+                    			if [[ $selected_file == ls* ]]; then
+                        			eval "$selected_file"
+                    			elif [[ $selected_file == pwd* ]]; then
+                        			eval "$selected_file"
+					elif [[ $selected_file == cd* ]]; then
+						eval "$selected_file"
+                    			else
+                        			break
+                    			fi
+                		done
+ 
+            		else
+                		selected_file="${raw_files[$h5_choice-1]}"
+            		fi                
+
+			file_no_extension=${selected_file%*.h5}
+			timestamp=${file_no_extension#*raw_}
+			converted_filename=datalog_${timestamp}.h5
+			echo "Converting raw file $selected_file to HDF5 file $converted_filename..."
+			echo "python3 $converter_dir/convert_rawhdf5_to_hdf5.py -i $selected_file -o $converted_data/$converted_filename"
+			python3 $converter_dir/convert_rawhdf5_to_hdf5.py -i $selected_file -o $converted_data/$converted_filename
+			#mv $selected_file $raw_data/
+			#echo "Moved $selected_file to $raw_data/$selected_file"
+			echo "Saved converted hdf5 file (if the conversion succeeded) to $converted_data/$converted_filename"
+		fi
     else
-        echo "Invalid choice. Please enter 1, 2, 3, 4, or 'q' to quit."
+        echo "Invalid choice. Please enter 1, 2, 3, 4, 5, 6, 7, 8,  or 'q' to quit."
     fi
 done
