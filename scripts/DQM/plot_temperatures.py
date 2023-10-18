@@ -15,12 +15,23 @@ def plot_temperatures():
     ax.plot(time_objects, middle_getter_temperature, marker='o', linestyle='-', label='Middle Getter')
     ax.plot(time_objects, bottom_getter_temperature, marker='o', linestyle='-', label='Bottom Getter')
     ax.plot(time_objects, bottom_mol_siv_temperature, marker='o', linestyle='-', label='Bottom Mol Siv')
+    ax.plot(time_objects, exhaust_temperature, marker='o', linestyle='-', label='Exhaust')
 
     # Setting x-axis to display in month/day hour:minute format
     ax.xaxis.set_major_formatter(mdates.DateFormatter('%m/%d %H:%M'))
+    
+    # Adjust y-axis limits
+    ymin = min(min(top_getter_temperature), min(middle_getter_temperature), min(bottom_getter_temperature), min(bottom_mol_siv_temperature), min(exhaust_temperature))
+    ymax = max(max(top_getter_temperature), max(middle_getter_temperature), max(bottom_getter_temperature), max(bottom_mol_siv_temperature), max(exhaust_temperature))
+    ax.set_ylim(ymin - ymin*0.1, ymax + ymax*0.25)
 
+    # Draw vertical line at the specified time
+    h2_start_time = datetime.strptime("10/18 13:30", "%m/%d %H:%M")
+    ax.axvline(x=h2_start_time, color='r', linestyle='--')
+    ax.text(datetime.strptime("10/18 13:35", "%m/%d %H:%M"), ymax + ymax*0.026, r'$H_2$ flow started', rotation=90, color='k', fontsize=8)
+    
     # Providing title and labels
-    ax.set_title("Temperature vs. Time")
+    ax.set_title("Filter Activation Temperatures Over Time [Oct 17-18]")
     ax.set_xlabel("Time (Month/Day Hour:Minute)")
     ax.set_ylabel("Temperature (°C)")
     ax.grid(True)
@@ -39,6 +50,7 @@ def update_plot():
         new_mid_temp = float(middle_getter_entry.get())
         new_bot_temp = float(bottom_getter_entry.get())
         new_bot_mol_temp = float(bottom_mol_siv_entry.get())
+        new_exhaust_temp = float(exhaust_entry.get())
 
         # Convert new date to datetime object
         new_time_obj = datetime.strptime(new_date, "%m/%d %H:%M")
@@ -50,11 +62,12 @@ def update_plot():
         middle_getter_temperature.append(new_mid_temp)
         bottom_getter_temperature.append(new_bot_temp)
         bottom_mol_siv_temperature.append(new_bot_mol_temp)
+        exhaust_temperature.append(new_exhaust_temp)
         
         # Update the text file with new values
         with open('temperature_data.txt', 'a', newline='') as file:
             writer = csv.writer(file, delimiter=',')
-            writer.writerow([new_date, new_top_temp, new_mid_temp, new_bot_temp, new_bot_mol_temp])
+            writer.writerow([new_date, new_top_temp, new_mid_temp, new_bot_temp, new_bot_mol_temp, new_exhaust_temp])
         
         # Update the last time plotted label
         last_time_label.config(text=f"Last Time Plotted: {new_date}")
@@ -78,6 +91,7 @@ def update_plot():
         middle_getter_entry.delete(0, tk.END)
         bottom_getter_entry.delete(0, tk.END)
         bottom_mol_siv_entry.delete(0, tk.END)
+        exhaust_entry.delete(0, tk.END)
 
     except Exception as e:
         messagebox.showerror("Error", f"An error occurred: {str(e)}\nPlease check your inputs and try again.")
@@ -88,6 +102,7 @@ top_getter_temperature = []
 middle_getter_temperature = []
 bottom_getter_temperature = []
 bottom_mol_siv_temperature = []
+exhaust_temperature = []
 
 with open('temperature_data.txt', 'r') as file:
     reader = csv.reader(file, delimiter=',')
@@ -98,6 +113,7 @@ with open('temperature_data.txt', 'r') as file:
         middle_getter_temperature.append(float(row[2]))
         bottom_getter_temperature.append(float(row[3]))
         bottom_mol_siv_temperature.append(float(row[4]))
+        exhaust_temperature.append(float(row[5]))
 
 # Convert string times to datetime objects
 time_objects = [datetime.strptime(t, "%m/%d %H:%M") for t in times]
@@ -159,10 +175,15 @@ bottom_mol_siv_label.grid(row=3, column=2)
 bottom_mol_siv_entry = ttk.Entry(input_frame)
 bottom_mol_siv_entry.grid(row=3, column=3)
 
+exhaust_label = ttk.Label(input_frame, text="Exhaust Temperature [°C]")
+exhaust_label.grid(row=4, column=2)
+exhaust_entry = ttk.Entry(input_frame)
+exhaust_entry.grid(row=4, column=3)
+
 submit_button = ttk.Button(input_frame, text="Submit Data", command=update_plot)
-submit_button.grid(row=4, column=0, columnspan=4)
+submit_button.grid(row=5, column=0, columnspan=4)
 
 last_time_label = ttk.Label(input_frame, text=f"Last Time Plotted: {times[-1] if times else 'N/A'}")
-last_time_label.grid(row=5, column=0, columnspan=4)
+last_time_label.grid(row=6, column=0, columnspan=4)
 
 root.mainloop()
