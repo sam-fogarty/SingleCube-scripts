@@ -124,30 +124,40 @@ def acquire_waveform(scope, mode, num_samples):
         scope.write("DAT:ENC SRI")
         scope.write("DAT:WIDTH 1")
         scope.write("DAT:START 1")
+        scope.write(":WFMO:ENC BINARY")
+        scope.write(":WFMO:BYT_Nr 1")
+        scope.write(":WFMO:BIT_Nr 16")
         scope.write("DAT:STOP 1e10")
         recordLength = int(scope.query("WFMO:NR_P?"))
         scope.write(f"DAT:STOP {recordLength}")
-
+        sample_rate = float(scope.query("HORizontal:MODE:SAMPLERate?"))
+        time_resolution = 1/sample_rate
+        #print(f'sample rate = {sample_rate}')
         def fetch_waveform(channel, first=True):
             scope.write(f"DATA:SOUR {channel}")
-
+            #print(f'units of yvalues: {scope.query("WFMOutpre:YUNit?")}')
+            #print(f'units of xvalues: {scope.query("WFMOutpre:XUNit?")}')
             ymult = float(scope.query("WFMO:YMULT?"))
             yzero = float(scope.query("WFMO:YZERO?"))
             yoff = float(scope.query("WFMO:YOFF?"))
-
             scope.write("curve?")
-            rawData = scope.read_binary_values(datatype='b', is_big_endian=False, container=np.ndarray, header_fmt='ieee', expect_termination=True)
+            rawData = scope.read_binary_values(datatype='h', is_big_endian=False, container=np.ndarray, header_fmt='ieee', expect_termination=True)
 
             if first:
                 xinc = float(scope.query("WFMO:XINCR?"))
+                print(f'xinc = {xinc}')
                 xzero = float(scope.query("WFMO:XZERO?"))
+                print(f'xzero = {xzero}')
                 pt_off = int(scope.query("WFMO:PT_OFF?"))
+                print(f'pt_off = {pt_off}')
                 t0 = (-pt_off * xinc) + xzero
-                xvalues = np.linspace(t0, t0 + xinc * (len(rawData) - 1), len(rawData))
+                print(f't0: {t0}')
+                #xvalues = np.linspace(t0, t0 + xinc * (len(rawData) - 1), len(rawData))
+                xvalues = np.linspace(t0, t0 + time_resolution * recordLength, recordLength)
             else:
                 xvalues = None
             yvalues = (rawData - yoff) * ymult + yzero
-
+            #print(f'channel {channel} yvalues: {yvalues[0:10]*1e3}')
             return xvalues, yvalues
 
         xvalues, yvalues_ch1 = fetch_waveform("CH1")
