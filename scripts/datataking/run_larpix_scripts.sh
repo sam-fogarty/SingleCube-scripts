@@ -34,10 +34,15 @@ pedestal_and_trigger_rate=pedestal_and_trigger_rate
 mkdir -p $pedestal_and_trigger_rate
 raw_data=/mount/sda1/SingleCube_092023/warm_fullTPC_noShielding/raw_data
 converted_data=/mount/sda1/SingleCube_092023/warm_fullTPC_noShielding/converted_data
+metric_plots=plots
+mkdir -p $metric_plots
 
 echo " "
 echo "This is a helper script for running the LArPix data-taking scripts with a LArTPC. Before running any of these scripts, make sure the TPC is connected to the PACMAN, everything is powered up, and the current draw looks reasonable."
 echo " "
+
+echo "Enter a file descriptor to add to the files (no spaces)":
+read descriptor
 
 while true; do
     echo "Enter the number of which script you would like to run (q to quit): "
@@ -50,6 +55,7 @@ while true; do
     echo "7 - threshold_qc.py (make thresholds)"
     echo "8 - start_run_log_raw.py (self-trigger run)"
     echo "9 - convert_rawhdf5_to_hdf5.py (convert raw file to packets file)"
+    echo "10 - plot_metric.py (plot mean, standard deviation, rate per channel)"
     read number
 
     # Check if the user wants to quit
@@ -99,8 +105,8 @@ while true; do
                 echo "You selected: $selected_file"
 
                 # Prompt the user for a file descriptor
-                echo "Please enter a file descriptor (no spaces):"
-                read descriptor
+                #echo "Please enter a file descriptor (no spaces):"
+                #read descriptor
 
                 # Construct the new filename
                 base_name=$(basename "$selected_file" .json)
@@ -176,8 +182,8 @@ while true; do
                         count=$((count+1))
                 done
                 read choice
-                echo "Enter file descriptor (no spaces):"
-                read descriptor
+                #echo "Enter file descriptor (no spaces):"
+                #read descriptor
                 selected_file="${png_files[$choice-1]}"
                 base_name=$(basename "$selected_file" .png)
                 new_file="${base_name}_${descriptor}.png"
@@ -251,8 +257,8 @@ while true; do
                     count=$((count+1))
                 done
                 read choice
-                echo "Enter file descriptor (no spaces):"
-                read descriptor
+                #echo "Enter file descriptor (no spaces):"
+                #read descriptor
                 selected_file="${trigger_rate_files[$choice-1]}"
                 base_name=$(basename "$selected_file" .json)
                 new_file="${base_name}_${descriptor}.json"
@@ -380,8 +386,8 @@ while true; do
                     count=$((count+1))
                 done
                 read choice
-                echo "Enter file descriptor (no spaces):"
-                read descriptor
+                #echo "Enter file descriptor (no spaces):"
+                #read descriptor
                 selected_file="${pedestal_second_files[$choice-1]}"
                 base_name=$(basename "$selected_file" .json)
                 new_file="${base_name}_${descriptor}.json"
@@ -401,8 +407,8 @@ while true; do
                     count=$((count+1))
                 done
                 read choice
-                echo "Enter file descriptor (no spaces):"
-                read descriptor
+                #echo "Enter file descriptor (no spaces):"
+                #read descriptor
                 selected_file="${recursive_pedestal_files[$choice-1]}"
                 base_name=$(basename "$selected_file" .h5)
                 new_file="${base_name}_${descriptor}.h5"
@@ -481,8 +487,8 @@ while true; do
                             count=$((count+1))
                     done
                     read choice
-                    echo "Enter file descriptor (no spaces):"
-                    read descriptor
+                    #echo "Enter file descriptor (no spaces):"
+                    #read descriptor
                     selected_file="${png_files[$choice-1]}"
                     base_name=$(basename "$selected_file" .png)
                     new_file="${base_name}_trigger-rate_${descriptor}.png"
@@ -557,8 +563,8 @@ while true; do
                             count=$((count+1))
                     done
                     read choice
-                    echo "Enter file descriptor (no spaces):"
-                    read descriptor
+                    #echo "Enter file descriptor (no spaces):"
+                    #read descriptor
                     selected_file="${png_files[$choice-1]}"
                     base_name=$(basename "$selected_file" .png)
                     new_file="${base_name}_pedestal_${descriptor}.png"
@@ -678,8 +684,8 @@ while true; do
                             count=$((count+1))
                     done
                     read choice
-                    echo "Enter file descriptor (no spaces):"
-                    read descriptor
+                    #echo "Enter file descriptor (no spaces):"
+                    #read descriptor
                     selected_file="${png_files[$choice-1]}"
                     base_name=$(basename "$selected_file" .png)
                     new_file="${base_name}_trigger-rate_and_pedestal_${descriptor}.png"
@@ -825,10 +831,10 @@ while true; do
                 fi
 	fi        
         echo "python3 threshold_qc.py --controller_config $hydra_network_selected_file --disabled_list $pedestal_disabled_selected_file --pedestal_file $recursive_pedestal_selected_file"
-        #python3 threshold_qc.py --controller_config $hydra_network_selected_file --disabled_list $pedestal_disabled_selected_file --pedestal_file $recursive_pedestal_selected_file
+        python3 threshold_qc.py --controller_config $hydra_network_selected_file --disabled_list $pedestal_disabled_selected_file --pedestal_file $recursive_pedestal_selected_file
         
-        echo "Enter a folder descriptor for asics-configs (folder will be named asics-configs_<file descriptor>): "
-	read asics_descriptor
+        #echo "Enter a folder descriptor for asics-configs (folder will be named asics-configs_<file descriptor>): "
+	#read asics_descriptor
 	mkdir -p $asics_configs/asics-configs_$asics_descriptor
 	mv *config*.json $asics_configs/asics-configs_$asics_descriptor/
 	echo "Asic config jsons moved to $asics_configs/asics-configs_$asics_descriptor/" 
@@ -1014,6 +1020,154 @@ while true; do
 			#echo "Moved $selected_file to $raw_data/$selected_file"
 			echo "Saved converted hdf5 file (if the conversion succeeded) to $converted_data/$converted_filename"
 		fi
+    elif [ "$number" == "10" ]; then
+	echo "Enter number corresponding to type of file to plot (enter 0 to specify path):"
+	echo "1 - Recursive pedestal data"
+	echo "2 - self-trigger data"
+	read plot_choice
+	if [ "$plot_choice" -eq "0" ]; then
+              	echo "Please enter path to hdf5 file:"
+                while true; do
+                    	echo "(You can use ls and pwd commands here to look around.)"
+                    	read selected_file
+			
+                    	if [[ $selected_file == ls* ]]; then
+                        	eval "$selected_file"
+                    	elif [[ $selected_file == pwd* ]]; then
+                        	eval "$selected_file"
+                    	else
+                     		break
+                    	fi
+                done
+		echo "python3 plot_metric.py --filename $selected_file --geometry_yaml layout-2.4.0.yaml --metric mean"
+		python3 plot_metric.py --filename $selected_file --geometry_yaml layout-2.4.0.yaml --metric mean
+		echo "python3 plot_metric.py --filename $selected_file --geometry_yaml layout-2.4.0.yaml --metric std"
+		python3 plot_metric.py --filename $selected_file --geometry_yaml layout-2.4.0.yaml --metric std
+		echo "python3 plot_metric.py --filename $selected_file --geometry_yaml layout-2.4.0.yaml --metric rate"
+		python3 plot_metric.py --filename $selected_file --geometry_yaml layout-2.4.0.yaml --metric rate
+
+		rm -f tile-id-3-1d-mean_std_rate.png
+		rm -f tile-id-3-xy-mean_std_rate.png
+		rm -f tile-id-3-1d-xy-mean_std_rate.png
+		convert tile-id-3-1d-mean.png tile-id-3-1d-rate.png tile-id-3-1d-std.png +append tile-id-3-1d-mean_std_rate.png
+		convert tile-id-3-1d-mean_std_rate.png -resize x525 tile-id-3-1d-mean_std_rate.png
+
+		convert tile-id-3-xy-mean.png tile-id-3-xy-rate.png tile-id-3-xy-std.png +append tile-id-3-xy-mean_std_rate.png
+		convert tile-id-3-xy-mean_std_rate.png -resize x500 tile-id-3-xy-mean_std_rate.png
+		rm -f tile-id-3-1d-mean.png
+		rm -f tile-id-3-1d-std.png
+		rm -f tile-id-3-1d-rate.png
+		rm -f tile-id-3-xy-mean.png
+		rm -f tile-id-3-xy-std.png
+		rm -f tile-id-3-xy-rate.png
+		convert tile-id-3-1d-mean_std_rate.png tile-id-3-xy-mean_std_rate.png -append tile-id-3-1d-xy-mean_std_rate.png
+		rm -f tile-id-3-1d-mean_std_rate.png
+		rm -f tile-id-3-xy-mean_std_rate.png
+		selected_filename=$(basename "$selected_file")
+		file_no_extension=${selected_filename%*.h5}
+		timestamp=${file_no_extension#*}
+		mv tile-id-3-1d-xy-mean_std_rate.png $metric_plots/tile-id-3-1d-xy_mean_std_rate_${timestamp}.png
+		echo "Displaying plot, close plot window to continue."
+		display $metric_plots/tile-id-3-1d-xy-mean_std_rate_${timestamp}.png
+        elif [ "$plot_choice" -eq "1" ]; then
+		shopt -s nullglob
+		pedestal_files=( $recursive_pedestal_folder/*.h5 )
+		shopt -u nullglob
+		
+		if [ ${#pedestal_files[@]} -eq 0 ]; then
+                	echo "No .h5 files found in $recursive_pedestal_folder, moving on."
+                	exit 1
+                fi
+		count=1
+            
+            	echo "Enter the number corresponding to recursive pedestal file to convert: "
+            	for file in "${pedestal_files[@]}"; do
+                	echo "$count. $file"
+                	count=$((count+1))
+            	done
+            	read choice 
+		selected_file="${pedestal_files[$choice-1]}"
+		
+		echo "python3 plot_metric.py --filename $selected_file --geometry_yaml layout-2.4.0.yaml --metric mean"
+		python3 plot_metric.py --filename $selected_file --geometry_yaml layout-2.4.0.yaml --metric mean
+		echo "python3 plot_metric.py --filename $selected_file --geometry_yaml layout-2.4.0.yaml --metric std"
+		python3 plot_metric.py --filename $selected_file --geometry_yaml layout-2.4.0.yaml --metric std
+		echo "python3 plot_metric.py --filename $selected_file --geometry_yaml layout-2.4.0.yaml --metric rate"
+		python3 plot_metric.py --filename $selected_file --geometry_yaml layout-2.4.0.yaml --metric rate
+		
+		rm -f tile-id-3-1d-mean_std_rate.png
+		rm -f tile-id-3-xy-mean_std_rate.png
+		rm -f tile-id-3-1d-xy-mean_std_rate.png
+		convert tile-id-3-1d-mean.png tile-id-3-1d-rate.png tile-id-3-1d-std.png +append tile-id-3-1d-mean_std_rate.png
+		convert tile-id-3-1d-mean_std_rate.png -resize x525 -geometry +500 tile-id-3-1d-mean_std_rate.png
+
+		convert tile-id-3-xy-mean.png tile-id-3-xy-rate.png tile-id-3-xy-std.png +append tile-id-3-xy-mean_std_rate.png
+		convert tile-id-3-xy-mean_std_rate.png -resize x500 tile-id-3-xy-mean_std_rate.png
+		rm -f tile-id-3-1d-mean.png
+		rm -f tile-id-3-1d-std.png
+		rm -f tile-id-3-1d-rate.png
+		rm -f tile-id-3-xy-mean.png
+		rm -f tile-id-3-xy-std.png
+		rm -f tile-id-3-xy-rate.png
+		convert tile-id-3-1d-mean_std_rate.png tile-id-3-xy-mean_std_rate.png -append tile-id-3-1d-xy-mean_std_rate.png
+		rm -f tile-id-3-1d-mean_std_rate.png
+		rm -f tile-id-3-xy-mean_std_rate.png
+		selected_filename=$(basename "$selected_file")
+		file_no_extension=${selected_filename%*.h5}
+		timestamp=${file_no_extension#*recursive-pedestal_}
+		mv tile-id-3-1d-xy-mean_std_rate.png $metric_plots/tile-id-3-1d-xy-mean_std_rate_recursive-pedestal_${timestamp}.png
+		echo "Displaying plot, close plot window to continue."
+		display $metric_plots/tile-id-3-1d-xy-mean_std_rate_recursive-pedestal_${timestamp}.png	
+	elif [ "$plot_choice" -eq "2" ]; then
+		shopt -s nullglob
+		datalog_files=( $converted_data/*.h5 )
+		shopt -u nullglob
+		
+		if [ ${#datalog_files[@]} -eq 0 ]; then
+                	echo "No .h5 files found in $converted_data, moving on."
+                	exit 1
+                fi
+		count=1
+            
+            	echo "Enter the number corresponding to datalog/self-trigger file to convert: "
+            	for file in "${datalog_files[@]}"; do
+                	echo "$count. $file"
+                	count=$((count+1))
+            	done
+            	read choice 
+		selected_file="${datalog_files[$choice-1]}"
+		echo "python3 plot_metric.py --filename $selected_file --geometry_yaml layout-2.4.0.yaml --metric mean"
+		python3 plot_metric.py --filename $selected_file --geometry_yaml layout-2.4.0.yaml --metric mean
+		echo "python3 plot_metric.py --filename $selected_file --geometry_yaml layout-2.4.0.yaml --metric std"
+		python3 plot_metric.py --filename $selected_file --geometry_yaml layout-2.4.0.yaml --metric std
+		echo "python3 plot_metric.py --filename $selected_file --geometry_yaml layout-2.4.0.yaml --metric rate"
+		python3 plot_metric.py --filename $selected_file --geometry_yaml layout-2.4.0.yaml --metric rate
+
+		rm -f tile-id-3-1d-mean_std_rate.png
+		rm -f tile-id-3-xy-mean_std_rate.png
+		rm -f tile-id-3-1d-xy-mean_std_rate.png
+		convert tile-id-3-1d-mean.png tile-id-3-1d-rate.png tile-id-3-1d-std.png +append tile-id-3-1d-mean_std_rate.png
+		convert tile-id-3-1d-mean_std_rate.png -resize x525 tile-id-3-1d-mean_std_rate.png
+
+		convert tile-id-3-xy-mean.png tile-id-3-xy-rate.png tile-id-3-xy-std.png +append tile-id-3-xy-mean_std_rate.png
+		convert tile-id-3-xy-mean_std_rate.png -resize x500 tile-id-3-xy-mean_std_rate.png
+		rm -f tile-id-3-1d-mean.png
+		rm -f tile-id-3-1d-std.png
+		rm -f tile-id-3-1d-rate.png
+		rm -f tile-id-3-xy-mean.png
+		rm -f tile-id-3-xy-std.png
+		rm -f tile-id-3-xy-rate.png
+		convert tile-id-3-1d-mean_std_rate.png tile-id-3-xy-mean_std_rate.png -append tile-id-3-1d-xy-mean_std_rate.png
+		rm -f tile-id-3-1d-mean_std_rate.png
+		rm -f tile-id-3-xy-mean_std_rate.png
+		selected_filename=$(basename "$selected_file")
+		file_no_extension=${selected_filename%*.h5}
+		timestamp=${file_no_extension#*self-trigger_}
+		mv tile-id-3-1d-mean_std_rate.png $metric_plots/tile-id-3-1d-self-trigger_mean_std_rate_${timestamp}.png
+		echo "Displaying plot, close plot window to continue."
+		display $metric_plots/tile-id-3-1d-self-trigger_mean_std_rate_${timestamp}.png
+        fi   
+
     else
         echo "Invalid choice. Please enter 1, 2, 3, 4, 5, 6, 7, 8,  or 'q' to quit."
     fi
