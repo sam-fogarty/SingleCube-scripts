@@ -66,6 +66,7 @@ while true; do
     echo "10 - plot_metric.py (plot mean, standard deviation, rate per channel)"
     echo "11 - make pedestal and config json files"
     echo "12 - move files"
+    echo "13 - continuous self-trigger runs"
     read number
 
     # Check if the user wants to quit
@@ -330,8 +331,10 @@ while true; do
             fi
         fi
         echo " "
-        echo "python3 pedestal_qc.py --controller_config $selected_file --disabled_list $selected_do_not_enable_list" --runtime 180
-        python3 pedestal_qc.py --controller_config $selected_file --disabled_list $selected_do_not_enable_list
+        echo "Enter runtime for pedestal run (seconds):"
+        read runtime
+        echo "python3 pedestal_qc.py --controller_config $selected_file --disabled_list $selected_do_not_enable_list --runtime $runtime" 
+        python3 pedestal_qc.py --controller_config $selected_file --disabled_list $selected_do_not_enable_list --runtime $runtime
         mv *pedestal*DO-NOT-ENABLE*.h5 $pedestal_and_trigger_rate/
         echo "To retry, enter 1 and repick pedestal_qc.py."
         echo "To continue, enter 2."
@@ -778,9 +781,9 @@ while true; do
 		fi 
         echo "python3 threshold_qc.py --controller_config $hydra_network_selected_file --disabled_list $pedestal_disabled_selected_file --pedestal_file $recursive_pedestal_selected_file"
         python3 threshold_qc.py --controller_config $hydra_network_selected_file --disabled_list $pedestal_disabled_selected_file --pedestal_file $recursive_pedestal_selected_file
-		mkdir -p $asics_configs/asics-configs_$asics_descriptor
-		mv *config*.json $asics_configs/asics-configs_$asics_descriptor/
-		echo "Asic config jsons moved to $asics_configs/asics-configs_$asics_descriptor/" 
+		mkdir -p $asics_configs/asics-configs_$descriptor
+		mv *config*.json $asics_configs/asics-configs_$descriptor/
+		echo "Asic config jsons moved to $asics_configs/asics-configs_$descriptor/" 
 	elif [ "$number" == "8" ]; then
 	    shopt -s nullglob
 	    json_files=( $hydra_json_folder/*hydra*.json )
@@ -1230,6 +1233,111 @@ while true; do
         mv -f trigger_rate_do_not_enable/* ${files_drive_dir}/trigger_rate_do_not_enable/
         mv -f trigger_rate_no_cut/* ${files_drive_dir}/trigger_rate_no_cut/
         echo "Moved files from folders to ${files_drive_dir}"
+    elif [ "$number" == "13" ]; then
+        echo "Enter the runtime of each run in seconds:"
+        read runtime
+        
+        # pick hydra network file
+        shopt -s nullglob
+	    json_files=( $hydra_json_folder/*hydra*.json )
+	    shopt -u nullglob
+	    if [ -n "$hydra_network_file" ]; then
+	        echo "Using hydra network file ${hydra_network_file}"
+	        selected_file=$hydra_network_file
+	    elif [ ${#json_files[@]} -eq 0 ]; then
+	        echo "No .json files found in $hydra_json_folder, please enter path to hydra network file to use:"
+	        while true; do
+	            echo "(You can use ls and pwd commands here to look around)"
+	            read selected_file
+ 
+	            if [[ $selected_file == ls* ]]; then
+	                eval "$selected_file"
+	            elif [[ $selected_file == pwd* ]]; then
+	                eval "$selected_file"
+	            else
+	                break
+	            fi
+	        done
+	    else
+	        echo "Enter the number corresponding to hydra network file to use (enter 0 to manually enter path):"
+	        count=1
+	        for file in "${json_files[@]}"; do
+	                echo "$count. $file"
+	                count=$((count+1))
+	        done
+	        read json_choice
+	        if [ "$json_choice" -eq "0" ]; then
+	            echo "Please enter path to hydra network file to use:"
+	            while true; do
+	                echo "(You can use ls and pwd commands here to look around)"
+	                read selected_file
+
+	                if [[ $selected_file == ls* ]]; then
+	                    eval "$selected_file"
+	                elif [[ $selected_file == pwd* ]]; then
+	                    eval "$selected_file"
+	                else
+	                    break
+	                fi
+	            done
+ 
+	        else
+	            selected_file="${json_files[$json_choice-1]}"
+	        fi
+	    fi
+        
+        # pick asics-configs folder
+        asics_folders=( "$asics_configs"/*/ )
+	    asics_folders=( "${asics_folders[@]%/}" ) # trim trailing slashes 
+	    if [ ${#asics_folders[@]} -eq 0 ]; then
+	        echo "No asics configs found in $asics_configs, please enter path asic folder to use:"
+	        while true; do
+	            echo "(You can use ls and pwd commands here to look around)"
+	            read selected_folder
+	            if [[ $selected_folder == ls* ]]; then
+	                eval "$selected_folder"
+	            elif [[ $selected_folder == pwd* ]]; then
+	                eval "$selected_folder"
+	            else
+	                break
+	            fi
+	        done
+	    else
+	        echo "Enter the number corresponding to the asics config folder that you want to use (enter 0 to manually enter path):"
+	        count=1
+	        for file in "${asics_folders[@]}"; do
+	                echo "$count. $file"
+	                count=$((count+1))
+	        done
+	        read asics_choice
+	        if [ "$asics_choice" -eq "0" ]; then
+	            echo "Please enter path to asics configs folder to use:"
+	            while true; do
+	                echo "(You can use ls and pwd commands here to look around)"
+	                read selected_folder
+
+	                if [[ $selected_folder == ls* ]]; then
+	                    eval "$selected_folder"
+	                elif [[ $selected_folder == pwd* ]]; then
+	                    eval "$selected_folder"
+	                else
+	                    break
+	                fi
+	            done
+	        else
+	            selected_folder="${asics_folders[$asics_choice-1]}"
+	        fi
+	    fi
+	    while true; do
+	    	echo "Starting self-trigger run with runtime of $runtime seconds."
+		    echo "python3 start_run_log_raw.py --controller_config $selected_file --config_name $selected_folder --runtime $runtime"
+			python3 start_run_log_raw.py --controller_config $selected_file --config_name $selected_folder --runtime $runtime
+			mv *raw*.h5 $raw_data/
+			echo "Raw file moved to $raw_data"
+			seconds_to_wait=10
+			echo "Waiting $seconds_to_wait seconds until starting next run. If you want to cancel the script, do it now with ctrl-c."
+			sleep $seconds_to_wait
+		done
     else
         echo "Invalid choice."
     fi
