@@ -49,8 +49,29 @@ echo " "
 echo "This is a helper script for running the LArPix data-taking scripts with a LArTPC. Before running any of these scripts, make sure the TPC is connected to the PACMAN, everything is powered up, and the current draw looks reasonable. Make sure to modify the raw_data and converted_data directories: this script will automatically move all the files to corresponding directories. Make sure to also to use a good file descriptor as most of the files will be labeled with it."
 echo " "
 
-echo "Enter a file descriptor to add to the files (no spaces)". Make sure to be descriptive, like warm_TPC_in_cryostat_Dec52023 or LAr_Dec112023:
-read descriptor
+# load previous file descriptor
+VAR_FILE="larpix_script_data.json"
+# check if the JSON file exists
+if [ -f "$VAR_FILE" ]; then
+    descriptor=$(jq -r '.descriptor' "$VAR_FILE")
+    while true; do
+        echo "Use previous file descriptor '$descriptor'? (y/n)"
+        read use_last_descriptor
+        if [ "$use_last_descriptor" == "y" ] || [ "$use_last_descriptor" == "yes" ]; then
+            break
+        elif [ "$use_last_descriptor" == "n" ] || [ "$use_last_descriptor" == "no" ]; then
+            echo "Enter a file descriptor to add to the files (no spaces). Make sure to be descriptive, like warm_TPC_in_cryostat_Dec52023 or LAr_Dec112023:"
+            read new_descriptor
+            jq --arg new_descriptor "$new_descriptor" '.descriptor = $new_descriptor' "$VAR_FILE" > tmp.json && mv tmp.json "$VAR_FILE"
+            descriptor=$new_descriptor
+            break
+        fi
+    done
+else
+    echo "Enter a file descriptor to add to the files (no spaces). Make sure to be descriptive, like warm_TPC_in_cryostat_Dec52023 or LAr_Dec12023:"
+    read descriptor
+    echo "{ \"descriptor\": \"$descriptor\" }" > "$VAR_FILE" # update json
+fi
 
 while true; do
     echo "Enter the number of which script you would like to run (q to quit): "
