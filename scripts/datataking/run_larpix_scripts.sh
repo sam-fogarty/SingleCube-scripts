@@ -1403,9 +1403,37 @@ while true; do
 	            selected_folder="${asics_folders[$asics_choice-1]}"
 	        fi
 	    fi
-        echo "Enter value to raise or lower global threshold by (e.g. -1 to lower by 1, 1 to raise by 1)"
-        read global_threshold_shift
-        python3 increment_global.py ${selected_folder}/* --inc $global_threshold_shift
+        
+        echo "Pick option you would like to use:"
+        echo "1 - Change thresholds for all chips"
+        echo "2 - Change threshold for a single chip"
+        echo "3 - Change threshold for a single channel"
+        echo "4 - Disable or enable a channel"
+        read threshold_option
+
+        if [ "$threshold_option" -eq "1" ]; then
+            echo "Enter value to raise or lower global threshold by (e.g. -1 to lower by 1, 1 to raise by 1)"
+            read global_threshold_shift
+            python3 increment_global.py ${selected_folder}/* --inc $global_threshold_shift
+        elif [ "$threshold_option" -eq "2" ]; then
+            while true; do
+                echo "Enter chip id:"
+                read chip_id
+                echo "Enter value to raise or lower global threshold by (e.g. -1 to lower by 1, 1 to raise by 1)"
+                read global_threshold_shift
+                pattern="[0-9]*-[0-9]*-${chip_id}"
+                asic_file=$(find ${selected_folder} -type f -regex ".*$pattern.*\.json")
+                current_threshold_global=$(jq -r '.register_values.threshold_global' "$asic_file")
+                new_global_threshold=$((current_threshold_global + global_threshold_shift))
+                jq --arg new_global_threshold "$new_global_threshold" '.register_values.threshold_global = $new_global_threshold' "$asic_file" > tmp.json && mv tmp.json "$asic_file"
+                echo "Changed global threshold for chip ID ${chip_id} from ${current_threshold_global} to ${new_global_threshold} at ${selected_folder}"
+                echo "Change another chip? (y/n)"
+                read change_another_chip
+                if [ $change_another_chip == "n" ]; then
+                    break
+                fi
+            done
+        fi 
     else
         echo "Invalid choice."
     fi
