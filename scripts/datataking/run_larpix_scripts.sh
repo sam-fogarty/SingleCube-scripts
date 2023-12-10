@@ -103,7 +103,7 @@ while true; do
             # Rename the file
             mv "$selected_file" "$hydra_json_folder/$new_file"
             echo "Hydra network file has been moved to: $hydra_json_folder/$new_file"
-            hydra_network_file=$new_file  
+            hydra_network_file=$hydra_json_folder/$new_file  
             echo " "
         fi
     elif [ "$number" == "3" ]; then
