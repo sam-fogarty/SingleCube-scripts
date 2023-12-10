@@ -42,6 +42,7 @@ larpix_v2_testing_scripts_dir=~/SingleCube/larpix-v2-testing-scripts/event-displ
 evd_configs=evd_configs
 mkdir -p $evd_configs
 files_drive_dir=/mount/sda1/SingleCube_files
+larpix_monitor_dir=/home/herogers/SingleCube/larpix-monitor
 
 hydra_network_file=""
 
@@ -84,11 +85,13 @@ while true; do
     echo "7 - threshold_qc.py (make thresholds)"
     echo "8 - start_run_log_raw.py (self-trigger run)"
     echo "9 - convert_rawhdf5_to_hdf5.py (convert raw file to packets file)"
-    echo "10 - plot_metric.py (plot mean, standard deviation, rate per channel)"
+    echo "10 - plot_metric.py (plot mean, standard deviation, rate per channel; uses converted h5 file)"
     echo "11 - make pedestal and config json files"
     echo "12 - move files"
     echo "13 - continuous self-trigger runs"
     echo "14 - increment_global.py (raise or lower global CRS threshold)"
+    echo "15 - run larpix-monitor (make e.g. 2D mean, std, rate plots, channel rate plot; uses raw h5 files)"
+
     read number
 
     # Check if the user wants to quit
@@ -1038,7 +1041,8 @@ while true; do
 				file_no_extension=${selected_filename%*.h5}
 				timestamp=${file_no_extension#*}
 				mv tile-id-3-1d-xy-mean_std_rate.png $metric_plots/tile-id-3-1d-xy_mean_std_rate_${timestamp}.png
-				echo "Displaying plot, close plot window to continue."
+			        	
+                                echo "Displaying plot, close plot window to continue."
 				display $metric_plots/tile-id-3-1d-xy-mean_std_rate_${timestamp}.png
         elif [ "$plot_choice" -eq "1" ]; then
 			shopt -s nullglob
@@ -1100,7 +1104,7 @@ while true; do
 		    fi
 			count=1
 		        
-        	echo "Enter the number corresponding to datalog/self-trigger file to convert: "
+        	echo "Enter the number corresponding to datalog/self-trigger file to use: "
         	for file in "${datalog_files[@]}"; do
             	echo "$count. $file"
             	count=$((count+1))
@@ -1134,8 +1138,9 @@ while true; do
 			selected_filename=$(basename "$selected_file")
 			file_no_extension=${selected_filename%*.h5}
 			timestamp=${file_no_extension#*self-trigger_}
-			mv tile-id-3-1d-mean_std_rate.png $metric_plots/tile-id-3-1d-self-trigger_mean_std_rate_${timestamp}.png
-			echo "Displaying plot, close plot window to continue."
+			#mv tile-id-3-1d-mean_std_rate.png $metric_plots/tile-id-3-1d-self-trigger_mean_std_rate_${timestamp}.png
+			mv tile-id-3-1d-xy-mean_std_rate.png $metric_plots/tile-id-3-1d-self-trigger_mean_std_rate_${timestamp}.png
+                        echo "Displaying plot, close plot window to continue."
 			display $metric_plots/tile-id-3-1d-self-trigger_mean_std_rate_${timestamp}.png
 		fi   
     elif [ "$number" == "11" ]; then
@@ -1425,7 +1430,8 @@ while true; do
                 asic_file=$(find ${selected_folder} -type f -regex ".*$pattern.*\.json")
                 current_threshold_global=$(jq -r '.register_values.threshold_global' "$asic_file")
                 new_global_threshold=$((current_threshold_global + global_threshold_shift))
-                jq --arg new_global_threshold "$new_global_threshold" '.register_values.threshold_global = $new_global_threshold' "$asic_file" > tmp.json && mv tmp.json "$asic_file"
+                python3 increment_global.py $asic_file --inc $global_threshold_shift
+                #jq --arg new_global_threshold "$new_global_threshold" '.register_values.threshold_global = $new_global_threshold' "$asic_file" > tmp.json && mv tmp.json "$asic_file"
                 echo "Changed global threshold for chip ID ${chip_id} from ${current_threshold_global} to ${new_global_threshold} at ${selected_folder}"
                 echo "Change another chip? (y/n)"
                 read change_another_chip
@@ -1433,7 +1439,28 @@ while true; do
                     break
                 fi
             done
-        fi 
+        fi
+    elif [ "$number" == "15" ]; then
+		shopt -s nullglob
+		raw_files=( $raw_data/*.h5 )
+		shopt -u nullglob
+			
+		if [ ${#raw_files[@]} -eq 0 ]; then
+	            	echo "No .h5 files found in $raw_data, moving on."
+	            	exit 1
+		fi
+		count=1
+		        
+        	echo "Enter the number corresponding to raw data file to use for plotting:"
+        	for file in "${raw_files[@]}"; do
+            		echo "$count. $file"
+            		count=$((count+1))
+        	done
+        	read choice 
+		selected_file="${raw_files[$choice-1]}"
+    
+        	python3 $larpix_monitor_dir/run_monitor.py --once $selected_file
+        	echo "Plots can be found in $larpix_monitor_dir/plots"
     else
         echo "Invalid choice."
     fi
