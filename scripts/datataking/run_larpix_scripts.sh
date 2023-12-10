@@ -88,6 +88,7 @@ while true; do
     echo "11 - make pedestal and config json files"
     echo "12 - move files"
     echo "13 - continuous self-trigger runs"
+    echo "14 - increment_global.py (raise or lower global CRS threshold)"
     read number
 
     # Check if the user wants to quit
@@ -1359,6 +1360,52 @@ while true; do
 			echo "Waiting $seconds_to_wait seconds until starting next run. If you want to cancel the script, do it now with ctrl-c."
 			sleep $seconds_to_wait
 		done
+    elif [ "$number" == "14" ]; then
+            # pick asics-configs folder
+            asics_folders=( "$asics_configs"/*/ )
+	    asics_folders=( "${asics_folders[@]%/}" ) # trim trailing slashes 
+	    if [ ${#asics_folders[@]} -eq 0 ]; then
+	        echo "No asics configs found in $asics_configs, please enter path asic folder to use:"
+	        while true; do
+	            echo "(You can use ls and pwd commands here to look around)"
+	            read selected_folder
+	            if [[ $selected_folder == ls* ]]; then
+	                eval "$selected_folder"
+	            elif [[ $selected_folder == pwd* ]]; then
+	                eval "$selected_folder"
+	            else
+	                break
+	            fi
+	        done
+	    else
+	        echo "Enter the number corresponding to the asics config folder that you want to use (enter 0 to manually enter path):"
+	        count=1
+	        for file in "${asics_folders[@]}"; do
+	                echo "$count. $file"
+	                count=$((count+1))
+	        done
+	        read asics_choice
+	        if [ "$asics_choice" -eq "0" ]; then
+	            echo "Please enter path to asics configs folder to use:"
+	            while true; do
+	                echo "(You can use ls and pwd commands here to look around)"
+	                read selected_folder
+
+	                if [[ $selected_folder == ls* ]]; then
+	                    eval "$selected_folder"
+	                elif [[ $selected_folder == pwd* ]]; then
+	                    eval "$selected_folder"
+	                else
+	                    break
+	                fi
+	            done
+	        else
+	            selected_folder="${asics_folders[$asics_choice-1]}"
+	        fi
+	    fi
+        echo "Enter value to raise or lower global threshold by (e.g. -1 to lower by 1, 1 to raise by 1)"
+        read global_threshold_shift
+        python3 increment_global.py ${selected_folder}/* --inc $global_threshold_shift
     else
         echo "Invalid choice."
     fi
