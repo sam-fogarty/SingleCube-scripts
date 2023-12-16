@@ -32,10 +32,15 @@ power_up_jsons=power_up_jsons
 mkdir -p $power_up_jsons
 pedestal_and_trigger_rate=pedestal_and_trigger_rate
 mkdir -p $pedestal_and_trigger_rate
-raw_data=/mount/sda1/SingleCube_Dec2023/raw_data
-converted_data=/mount/sda1/SingleCube_Dec2023/converted_data
+#data_folder=/mount/sda1/SingleCube_Dec2023
+data_folder=/mount/sda1/SingleCube_Jan2023/LAr/selfTriggered/18kV
+raw_data=${data_folder}/raw_data
+#converted_data=${data_folder}/converted_data
+converted_data=${data_folder}
+cluster_data=${data_folder}/cluster_data
 mkdir -p $raw_data
 mkdir -p $converted_data
+mkdir -p $cluster_data
 metric_plots=plots
 mkdir -p $metric_plots
 larpix_v2_testing_scripts_dir=~/SingleCube/larpix-v2-testing-scripts/event-display
@@ -43,7 +48,7 @@ evd_configs=evd_configs
 mkdir -p $evd_configs
 files_drive_dir=/mount/sda1/SingleCube_files
 larpix_monitor_dir=/home/herogers/SingleCube/larpix-monitor
-
+clustering_code_dir=/home/herogers/SingleCube/ndlar_39Ar_reco/charge_reco
 hydra_network_file=""
 
 echo " "
@@ -91,7 +96,7 @@ while true; do
     echo "13 - continuous self-trigger runs"
     echo "14 - increment_global.py (raise or lower global CRS threshold)"
     echo "15 - run larpix-monitor (make e.g. 2D mean, std, rate plots, channel rate plot; uses raw h5 files)"
-
+    echo "16 - run clustering on packetized file"
     read number
 
     # Check if the user wants to quit
@@ -1461,6 +1466,29 @@ while true; do
     
         	python3 $larpix_monitor_dir/run_monitor.py --once $selected_file
         	echo "Plots can be found in $larpix_monitor_dir/plots"
+    elif [ "$number" == "16" ]; then
+                 shopt -s nullglob
+                 converted_files=( $converted_data/*.h5 )
+                 shopt -u nullglob
+ 
+                 if [ ${#converted_files[@]} -eq 0 ]; then
+                         echo "No .h5 files found in $converted_data, moving on."
+                         exit 1
+                 fi
+                 count=1
+ 
+                 echo "Enter the number corresponding to packet file to use:"
+                 for file in "${converted_files[@]}"; do
+                         echo "$count. $file"
+                         count=$((count+1))
+                 done
+                 read choice
+                 selected_file="${converted_files[$choice-1]}"
+                 selected_filename=$(basename "${selected_file}" .h5)
+                 home_dir=$(pwd)
+                 cd ${clustering_code_dir}
+                 python3 charge_clustering.py SingleCube ${selected_file} ${cluster_data}/${selected_filename}_clusters.h5 --save_hits=True
+                 cd ${home_dir}
     else
         echo "Invalid choice."
     fi
