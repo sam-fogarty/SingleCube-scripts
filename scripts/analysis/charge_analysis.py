@@ -8,12 +8,13 @@ def run_analysis(filepath):
     
     file = h5py.File(filepath, 'r')
     clusters = file['clusters']
-    hits = file['clusters_hits']
+    hits = file['hits']
     
     # make Delta t histogram
     nbins = 100
-    nhit_cut = 15
-    plotting_scripts.Delta_t(clusters[clusters['nhit'] > nhit_cut], nbins)
+    nhit_cut = 1
+    upperXLimit = 30
+    plotting_scripts.Delta_t(clusters[clusters['nhit'] > nhit_cut], nbins, upperXLimit)
 
 
 if __name__ == "__main__":

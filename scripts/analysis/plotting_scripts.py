@@ -1,7 +1,7 @@
 import numpy as np
 import plotly.graph_objects as go
 
-def Delta_t(clusters, nbins):
+def Delta_t(clusters, nbins, upperXLimit):
     # Compute the time difference
     time_diff = (np.array(clusters['t_max']) - np.array(clusters['t_min'])) / 1e3
     
@@ -18,8 +18,8 @@ def Delta_t(clusters, nbins):
                 )
         )
     # Set the x-axis limits
-    xaxis_limits = [0, 250]  # Set the desired x-axis limits
-    fig.update_xaxes(range=xaxis_limits, tickmode='linear', dtick=25)
+    xaxis_limits = [0, upperXLimit]  # Set the desired x-axis limits
+    fig.update_xaxes(range=xaxis_limits, tickmode='linear', dtick=10)
 
     # Set the fontsize of xaxis and yaxis tick labels
     fontsize_ticks = 14
