@@ -94,7 +94,7 @@ def update_graph(eventID):
 
     # Add 3D scatter plot to subplot
     fig.add_trace(go.Scatter3d(
-        x=all_t_data,
+        x=all_t_data-np.min(all_t_data),
         y=all_x_data,
         z=all_y_data,
         mode='markers',
@@ -118,7 +118,7 @@ def update_graph(eventID):
         xaxis_title="x [mm]",
         yaxis_title="y [mm]",
         scene=dict(
-            xaxis_title="timestamp [us]",
+            xaxis_title="Timestamp - min(timestamp) [us]",
             yaxis_title="x [mm]",
             zaxis_title="y [mm]",
             yaxis_range=[x_range[0], x_range[1]],  # Set x range
@@ -132,4 +132,4 @@ def update_graph(eventID):
     return fig
 
 if __name__ == '__main__':
-    app.run_server(debug=True)
+    app.run_server(host='127.0.0.1', port='8050', debug=True)
