@@ -1,7 +1,14 @@
 // script for controlling SRS pulser from PC through ethernet
 // To compile: gcc -o dg_ctrl dg_ctrl.c
-// To run: ./dg_ctrl [IP_ADDRESS]
-// ip address may be 129.82.140.56. Need to set the pulser to accept remote commands.
+// To run: ./dg_ctrl IP_ADDRESS [OPTION]
+// OPTION is an integer which will decide how to set the pulser configuration. 
+//     Options are: 0: default, turn on external trigger on CD and EF
+//                  1: Turn off external trigger on CD and EF (just sets delays to 0)
+//                  2: Turn on PPS pulse on AB
+// ip address may be 129.82.140.134, but it may change. Also need to set the pulser to accept remote commands.
+// To setup: Press Shift key then NET key to access network settings. Enable: TCPIP, DHCP, STATIC IP, and BARE. Reset network.
+//           Press Shift key then Status key: Press up arrow key, Status again, then a few more times until you get to the IP.
+//           Use this IP for controlling/pinging the pulser. Don't forget to connect the pulser to the internet with the ethernet cable.
 
 #include <sys/socket.h>
 #include <netinet/in.h>
@@ -23,17 +30,34 @@ unsigned dg_timeout = 3000; /* Read timeout in milliseconds */
 int main(int argc, char * argv[])
 {
     char buffer[1024];
+    int optionalArg = 0;
     
     /* Make sure ip address is supplied on the command line */
     if (argc < 2) {
-        printf("Usage: dg_ctrl IP_ADDRESS\n");
+        printf("Usage: dg_ctrl IP_ADDRESS [OPTION]\n");
         exit(1);
     }
     
+    if (argc >= 3) {
+        optionalArg = atoi(argv[2]);
+    }
+    
+
     /* Connect to the dg645 */
     if (dg_connect(inet_addr(argv[1]))) {
         printf("Connection Succeeded\n");
         
+        if (optionalArg == 0) {
+	    printf("Using option 0: Turning on external trigger on CD and EF outputs.\n");
+	} else if (optionalArg == 1) {
+	    printf("Using option 1: Turning off external trigger on CD and EF outputs.\n");
+	} else if (optionalArg == 2) {
+            printf("Using option 2: Turning on PPS pulsing on AB output.\n");
+        } else {
+            printf("Unsupported option. Exiting...\n");
+	    exit(1);
+        }
+	
         /* Get identification string */
         dg_write("*idn?\n");
         if (dg_read(buffer, sizeof(buffer)))
@@ -42,15 +66,24 @@ int main(int argc, char * argv[])
             printf("Timeout\n");
         
         /* Load default settings */
-        dg_write("*rst\n");
+        //dg_write("*rst\n");
         /* Set internal triggering */
         dg_write("tsrc 0\n");
-        /* Set trigger rate to 2kHz */
-        dg_write("trat 7000\n");
-        /* Set A = 0 + 10 us */
-        dg_write("dlay 2,0,10e-6\n");
-        /* Set B = A + 1 us */
-        dg_write("dlay 3,2,1e-6\n");
+        /* Set trigger rate */
+        dg_write("trat 1\n");
+
+        if (optionalArg == 0) {
+            dg_write("dlay 5,4,200e-9\n");
+	    dg_write("dlay 7,6,200e-9\n");
+	    dg_write("lamp 2,3.3\n");
+	    dg_write("lamp 3,3.3\n");
+        } else if (optionalArg == 1) {
+	    dg_write("dlay 5,4,0\n");
+            dg_write("dlay 7,6,0\n");
+	} else if (optionalArg == 2) {
+	    dg_write("dlay 3,2,200e-9\n");
+	    dg_write("lamp 1,3.3\n");
+        }
         /* Make sure all commands have executed before closing connection */
         dg_write("*opc?\n");
         if (!dg_read(buffer, sizeof(buffer)))
